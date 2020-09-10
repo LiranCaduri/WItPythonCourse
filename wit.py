@@ -392,17 +392,16 @@ def merge():
 
         smaller = len(head_commits) if len(head_commits) <= len(branch_commits) else len(branch_commits)
 
-        common_daddy = None # spank me like u own me
+        common_father = None
 
         for i in range(smaller):
             if head_commits[i] == branch_commits[i]:
-                common_daddy = head_commits[i] # (;
+                common_father = head_commits[i] # (;
 
 
         branch_last = pointers[branch_name]
         head = pointers['HEAD']
 
-        # make a commit - optional take apart commit function to different functions and assemble, make it work
         try:
             copy_tree(f"{IMAGES_PATH}/{branch_last}", STAGE_PATH)
         except OSError as e:
@@ -458,3 +457,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# git repo
+# https://github.com/LiranCaduri/WItPythonCourse
