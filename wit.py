@@ -1,30 +1,33 @@
-import os
-import sys
-import shutil
-import random
 import datetime
-import filecmp
-import string
 from distutils.dir_util import copy_tree
+import filecmp
+import os
+import random
+import shutil
+import string
+import sys
 
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
+
 
 # constants
 ROOT_PATH = os.getcwd()
-FILES_TO_BE_IGNORE = ['.DS_Store','.wit']
+FILES_TO_BE_IGNORE = ['.DS_Store', '.wit']
 REF_PATH = ".wit/references.txt"
 STAGE_PATH = '.wit/staging_area'
 IMAGES_PATH = '.wit/images'
 
+
 def init():
-    folders = [".wit",".wit/images",'.wit/staging_area']
+    folders = [".wit", ".wit/images", '.wit/staging_area']
     for folder in folders:
         if not os.path.isdir(folder):
-            os.mkdir(os.path.join(ROOT_PATH,folder))
+            os.mkdir(os.path.join(ROOT_PATH, folder))
 
     with open('.wit/activated.txt', 'w') as active_file:
         active_file.write('master')
+
 
 def add():
     pathToFile = sys.argv[2]
@@ -50,15 +53,17 @@ def add():
     else:
         raise FileNotFoundError("'.wit' directory not exist run init command on current running directory.")
 
+
 def generate_commit_id():
     letters = string.hexdigits[:-6]
     return ''.join(random.choice(letters) for _ in range(40))
 
+
 def commit():
     if '.wit' in os.listdir(ROOT_PATH) and sys.argv[2]:
         commit_id = generate_commit_id()
-        image_path =  f".wit/images/{commit_id}"
-        stage_path = f'.wit/staging_area/'
+        image_path = f".wit/images/{commit_id}"
+        stage_path = '.wit/staging_area/'
 
         os.mkdir(image_path)
 
@@ -109,6 +114,7 @@ def commit():
     else:
         raise FileNotFoundError("'.wit' directory not exist run init command on current running directory.")
 
+
 def report_recursive_old(dcmp, withLeft=True, withRight=True, withDiff=True):
     if withDiff:
         for name in dcmp.diff_files:
@@ -125,11 +131,13 @@ def report_recursive_old(dcmp, withLeft=True, withRight=True, withDiff=True):
                 # only if not in stage at all
                 print(f"\t{dcmp.right}/{name}")
     for sub_dcmp in dcmp.subdirs.values():
-        report_recursive_old(sub_dcmp, withLeft ,withRight, withDiff)
+        report_recursive_old(sub_dcmp, withLeft, withRight, withDiff)
+
 
 def print_report(report):
     for line in report:
         print(f"\t{line}\n")
+
 
 def status():
     try:
@@ -157,6 +165,7 @@ def status():
     not_in_stage = list(report_recursive(dcmp, withDiff=False))
     print_report(not_in_stage)
 
+
 def remove():
     root_path = os.getcwd()
     rm_path = f'{root_path}/.wit/staging_area/{sys.argv[2]}'
@@ -172,6 +181,7 @@ def remove():
     else:
         raise FileNotFoundError("'.wit' directory not exist run init command on current running directory.")
 
+
 def copy_to_root_folder(root_path, cur_path, commit_id):
     for filename in os.listdir(cur_path):
         if os.path.isfile(os.path.join(cur_path, filename)):
@@ -180,6 +190,7 @@ def copy_to_root_folder(root_path, cur_path, commit_id):
             copy_to_root_folder(root_path, os.path.join(cur_path, filename), commit_id)
         else:
             sys.exit("Should never reach here.")
+
 
 def report_recursive(dcmp, withLeft=True, withRight=True, withDiff=True):
     if withDiff:
@@ -197,7 +208,8 @@ def report_recursive(dcmp, withLeft=True, withRight=True, withDiff=True):
                 # only if not in stage at all
                 yield f"\t{dcmp.right}/{name}"
     for sub_dcmp in dcmp.subdirs.values():
-        yield from report_recursive(sub_dcmp, withLeft ,withRight, withDiff)
+        yield from report_recursive(sub_dcmp, withLeft, withRight, withDiff)
+
 
 def get_pointer_dict():
     pointers = {}
@@ -208,11 +220,13 @@ def get_pointer_dict():
             pointers.update({pointer[0]: pointer[1].strip('\n')})
     return pointers
 
+
 def get_pointers_dict_as_str(pointers):
     text = ''
     for key, val in pointers.items():
         text += f'{key}={val}\n'
     return text
+
 
 def get_active_branch():
     try:
@@ -224,14 +238,16 @@ def get_active_branch():
         return content
     return None
 
+
 def remove_files_from_root(root_path, commit_path): 
     for filename in os.listdir(root_path):
         if os.path.isfile(os.path.join(root_path, filename)):
 
-            if filename not in os.listdir(commit_path) :
+            if filename not in os.listdir(commit_path):
                 os.remove(os.path.join(root_path, filename))
         elif os.path.isdir(os.path.join(root_path, filename)) and filename not in FILES_TO_BE_IGNORE:
             remove_files_from_root(os.path.join(root_path, filename), os.path.join(commit_path, filename))
+
 
 def  checkout():
     commit_id = sys.argv[2]
@@ -256,11 +272,11 @@ def  checkout():
         dcmp_proj_to_stage = filecmp.dircmp(ROOT_PATH, stage_path)    
         projToStage = list(report_recursive(dcmp_proj_to_stage, withLeft=False))
         
-        #copy
+        # copy
         if not imgToStage and not projToStage:
             copy_to_root_folder(root_path=ROOT_PATH, cur_path=commit_folder, commit_id=commit_id)
 
-            #update stage
+            # update stage
             try:
                 if os.path.exists(stage_path):
                     shutil.rmtree(stage_path)
@@ -277,17 +293,18 @@ def  checkout():
                 ref_file.seek(0)
                 ref_file.write(get_pointers_dict_as_str(pointers))
 
-            #search branch
+            # search branch
             name = sys.argv[2]
             if name not in pointers.keys():
                 name = ''
             
-            with open('.wit/activated.txt','w') as active_file:
+            with open('.wit/activated.txt', 'w') as active_file:
                 active_file.write(name)
         else:
             print("no success")
     else:
         raise ValueError("Checkout command needs valid commit id or master.")
+
 
 def graph():
     try:
@@ -308,8 +325,9 @@ def graph():
 
         graph.add_edges_from(edges)
 
-        nx.draw(graph, with_labels=True, node_size= 8000, font_size = 10)
+        nx.draw(graph, with_labels=True, node_size=8000, font_size=10)
         plt.show()
+
 
 def extend_graph(parent):
     nodes = []
@@ -339,6 +357,7 @@ def extend_graph(parent):
 
     return [nodes, edges]
 
+
 def branch():
     if '.wit' in os.listdir(ROOT_PATH) and sys.argv[2]:
         name = sys.argv[2]
@@ -353,6 +372,7 @@ def branch():
 
     else:
         raise ValueError('Usage: python <filename> branch <name>')
+
 
 def merge():
     if sys.argv[2] and '.wit' in os.listdir(ROOT_PATH):
@@ -396,8 +416,7 @@ def merge():
 
         for i in range(smaller):
             if head_commits[i] == branch_commits[i]:
-                common_father = head_commits[i] # (;
-
+                common_father = head_commits[i]
 
         branch_last = pointers[branch_name]
         head = pointers['HEAD']
@@ -437,6 +456,7 @@ def merge():
     else:
         raise ValueError('Usage: python <filename> merge <branch name>')
 
+
 def main():
     commands = {
         "init": init,
@@ -455,8 +475,11 @@ def main():
     else:
         print("Command does not exist.")
 
+
 if __name__ == '__main__':
     main()
 
 # git repo
 # https://github.com/LiranCaduri/WItPythonCourse
+
+# Reupload
